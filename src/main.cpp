@@ -50,6 +50,14 @@ void setOutMuxBit(const uint8_t bitIdx, const bool value) {
 void setup() {
   // put your setup code here, to run once:
 
+
+  // Timer setup
+  TIM_TypeDef *Instance = TIM1;
+  HardwareTimer *sampleTimer = new HardwareTimer(Instance);
+  sampleTimer->setOverflow(22000, HERTZ_FORMAT);
+  sampleTimer->attachInterrupt(sampleISR);
+  sampleTimer->resume();
+
   //Set pin directions
   pinMode(RA0_PIN, OUTPUT);
   pinMode(RA1_PIN, OUTPUT);
@@ -175,6 +183,17 @@ const uint32_t stepSizes[] = {
   (uint32_t)(pow(semitoneRatio, 1) * baseFreq * (1ULL << 32) / 22000),
   (uint32_t)(pow(semitoneRatio, 2) * baseFreq * (1ULL << 32) / 22000),
 };
+
+static uint32_t phaseAcc = 0; // declare phase accumulator as static local variable
+
+void sampleISR() {
+  phaseAcc += currentStepSize; // update phase accumulator
+  
+  int32_t Vout = (phaseAcc >> 24) - 128; // convert phase accumulator to sawtooth waveform
+  
+  analogWrite(OUTR_PIN, Vout + 128); // write voltage to output pin
+}
+
 
 
 volatile uint32_t currentStepSize = 0;
