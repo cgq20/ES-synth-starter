@@ -156,7 +156,7 @@ void setRow(uint8_t rowIdx) {
   digitalWrite(REN_PIN, HIGH);
 }
 
-/*
+
 const float baseFreq = 440.0; // Frequency of A4
 const float baseNote = 9; // Index of A4 in the notes array
 const float semitoneRatio = pow(2, 1/12.0); // Factor between adjacent semitones
@@ -175,15 +175,15 @@ const uint32_t stepSizes[] = {
   (uint32_t)(pow(semitoneRatio, 1) * baseFreq * (1ULL << 32) / 22000),
   (uint32_t)(pow(semitoneRatio, 2) * baseFreq * (1ULL << 32) / 22000),
 };
-*/
+
+
+volatile uint32_t currentStepSize = 0;
 
 void loop() {
-  // put your main code here, to run repeatedly:
   static uint32_t next = millis();
-  static uint32_t count = 0;
   static uint8_t keyArray[7];
 
-  while (millis() < next);  //Wait for next interval
+  while (millis() < next);  // Wait for next interval
 
   next += interval;
 
@@ -194,16 +194,26 @@ void loop() {
     keyArray[i] = readCols();
   }
 
+  // Look up the corresponding step size for the pressed key
+  for (int i = 0; i < 12; i++) {
+    if (keyArray[0] & (1 << i)) {
+      currentStepSize = stepSizes[i];
+    }
+  }
+
   //Update display
   u8g2.clearBuffer();         // clear the internal memory
   u8g2.setFont(u8g2_font_ncenB08_tr); // choose a suitable font
-  u8g2.setCursor(2,10);
-  u8g2.print(keyArray[0], HEX);
-  u8g2.print(keyArray[1], HEX);
-  u8g2.print(keyArray[2], HEX);
+  u8g2.setCursor(2, 10);
+  for (int i = 0; i < 12; i++) {
+    if (keyArray[0] & (1 << i)) {
+      u8g2.print(notes[i]);
+      break;
+    }
+  }
   u8g2.sendBuffer();          // transfer internal memory to the display
 
   //Toggle LED
   digitalToggle(LED_BUILTIN);
-  
 }
+
