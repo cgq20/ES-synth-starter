@@ -79,21 +79,128 @@ void setup() {
   Serial.println("Hello World");
 }
 
+uint8_t readCols() {
+  uint8_t result = 0;
+  
+  // read column 0
+  if (digitalRead(C0_PIN) == HIGH) {
+    result |= 0b0001;
+  }
+  
+  // read column 1
+  if (digitalRead(C1_PIN) == HIGH) {
+    result |= 0b0010;
+  }
+  
+  // read column 2
+  if (digitalRead(C2_PIN) == HIGH) {
+    result |= 0b0100;
+  }
+  
+  // read column 3
+  if (digitalRead(C3_PIN) == HIGH) {
+    result |= 0b1000;
+  }
+  
+  return result;
+}
+
+
+/*
+uint8_t readCols(){
+  uint8_t result = 0;
+  
+  // set row select addresses low and enable row select
+  digitalWrite(RA0_PIN, LOW);
+  digitalWrite(RA1_PIN, LOW);
+  digitalWrite(RA2_PIN, LOW);
+  digitalWrite(REN_PIN, HIGH);
+  
+  // read column 0
+  if (digitalRead(C0_PIN) == HIGH) {
+    result |= 0b0001;
+  }
+  
+  // read column 1
+  if (digitalRead(C1_PIN) == HIGH) {
+    result |= 0b0010;
+  }
+  
+  // read column 2
+  if (digitalRead(C2_PIN) == HIGH) {
+    result |= 0b0100;
+  }
+  
+  // read column 3
+  if (digitalRead(C3_PIN) == HIGH) {
+    result |= 0b1000;
+  }
+  
+  // disable row select
+  digitalWrite(REN_PIN, LOW);
+  
+  return result;
+}
+*/
+
+void setRow(uint8_t rowIdx) {
+  // disable row select
+  digitalWrite(REN_PIN, LOW);
+  
+  // set row select addresses low
+  digitalWrite(RA0_PIN, (rowIdx & 0x01));
+  digitalWrite(RA1_PIN, (rowIdx & 0x02));
+  digitalWrite(RA2_PIN, (rowIdx & 0x04));
+  
+  // enable row select
+  digitalWrite(REN_PIN, HIGH);
+}
+
+/*
+const float baseFreq = 440.0; // Frequency of A4
+const float baseNote = 9; // Index of A4 in the notes array
+const float semitoneRatio = pow(2, 1/12.0); // Factor between adjacent semitones
+
+const uint32_t stepSizes[] = {
+  (uint32_t)(pow(semitoneRatio, -9) * baseFreq * (1ULL << 32) / 22000),
+  (uint32_t)(pow(semitoneRatio, -8) * baseFreq * (1ULL << 32) / 22000),
+  (uint32_t)(pow(semitoneRatio, -7) * baseFreq * (1ULL << 32) / 22000),
+  (uint32_t)(pow(semitoneRatio, -6) * baseFreq * (1ULL << 32) / 22000),
+  (uint32_t)(pow(semitoneRatio, -5) * baseFreq * (1ULL << 32) / 22000),
+  (uint32_t)(pow(semitoneRatio, -4) * baseFreq * (1ULL << 32) / 22000),
+  (uint32_t)(pow(semitoneRatio, -3) * baseFreq * (1ULL << 32) / 22000),
+  (uint32_t)(pow(semitoneRatio, -2) * baseFreq * (1ULL << 32) / 22000),
+  (uint32_t)(pow(semitoneRatio, -1) * baseFreq * (1ULL << 32) / 22000),
+  (uint32_t)(baseFreq * (1ULL << 32) / 22000),
+  (uint32_t)(pow(semitoneRatio, 1) * baseFreq * (1ULL << 32) / 22000),
+  (uint32_t)(pow(semitoneRatio, 2) * baseFreq * (1ULL << 32) / 22000),
+};
+*/
+
 void loop() {
   // put your main code here, to run repeatedly:
   static uint32_t next = millis();
   static uint32_t count = 0;
+  static uint8_t keyArray[7];
 
   while (millis() < next);  //Wait for next interval
 
   next += interval;
 
+  // Scan the keys
+  for (int i = 0; i < 3; i++) {
+    setRow(i);
+    delayMicroseconds(3);  // Wait for column lines to settle
+    keyArray[i] = readCols();
+  }
+
   //Update display
   u8g2.clearBuffer();         // clear the internal memory
   u8g2.setFont(u8g2_font_ncenB08_tr); // choose a suitable font
-  u8g2.drawStr(2,10,"Helllo World!");  // write something to the internal memory
-  u8g2.setCursor(2,20);
-  u8g2.print(count++);
+  u8g2.setCursor(2,10);
+  u8g2.print(keyArray[0], HEX);
+  u8g2.print(keyArray[1], HEX);
+  u8g2.print(keyArray[2], HEX);
   u8g2.sendBuffer();          // transfer internal memory to the display
 
   //Toggle LED
